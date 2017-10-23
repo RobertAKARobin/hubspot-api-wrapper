@@ -11,5 +11,13 @@
   "dependencies": {
     "querystring": "^0.2.0",
     "request": "^2.83.0"
+  },
+  "optionalDependencies": {
+    "body-parser": "^1.18.2",
+    "cookie-parser": "^1.4.3",
+    "dotenv": "^4.0.0",
+    "express": "^4.16.2",
+    "http": "0.0.0",
+    "path": "^0.12.7"
   }
 }
