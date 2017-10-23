@@ -8,7 +8,11 @@ module.exports = function(inputOptions){
 	var acceptableOptions = [
 		'entryPoint',
 		'exitPoint',
-		'cookieName'
+		'cookieName',
+		'client_id',
+		'client_secret',
+		'redirect_uri',
+		'hapikey'
 	];
 	acceptableOptions.forEach(function(optionName){
 		var inputValue = acceptableOptions[optionName];
@@ -32,8 +36,8 @@ module.exports = function(inputOptions){
 			init: function(){
 				return function(req, res, next){
 					res.redirect('https://app.hubspot.com/oauth/authorize?' + querystring.stringify({
-						client_id: process.env['CLIENT_ID'],
-						redirect_uri: process.env['REDIRECT_URI'],
+						client_id: options.client_id,
+						redirect_uri: options.redirect_uri,
 						scope: 'contacts'
 					}));
 				}
@@ -49,9 +53,9 @@ module.exports = function(inputOptions){
 						},
 						form: {
 							grant_type: 'authorization_code',
-							client_id: process.env['CLIENT_ID'],
-							client_secret: process.env['CLIENT_SECRET'],
-							redirect_uri: process.env['REDIRECT_URI'],
+							client_id: options.client_id,
+							client_secret: options.client_secret,
+							redirect_uri: options.redirect_uri,
 							code: requestToken
 						}
 					}, function(error, response, body){
@@ -77,7 +81,7 @@ module.exports = function(inputOptions){
 			return function(req, res, next){
 				if(process.env['NODE_ENV'] == 'development'){
 					params.qs = (params.qs || {})
-					params.qs['hapikey'] = process.env['HAPIKEY'];
+					params.qs['hapikey'] = options.hapikey;
 				}else if(process.env['NODE_ENV'] == 'production'){
 					params.headers = (params.headers || {});
 					params.headers['Authorization'] = 'Bearer ' + req.cookies[options.cookieName];
