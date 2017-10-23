@@ -4,10 +4,10 @@ var querystring = require('querystring');
 var BaseURL = 'https://api.hubapi.com/';
 
 module.exports = function(inputOptions){
-	var options;
+	var options = {};
 	var acceptableOptions = [
-		'entryPoint',
-		'exitPoint',
+		'authEntryPoint',
+		'authExitPoint',
 		'cookieName',
 		'client_id',
 		'client_secret',
@@ -15,65 +15,57 @@ module.exports = function(inputOptions){
 		'hapikey'
 	];
 	acceptableOptions.forEach(function(optionName){
-		var inputValue = acceptableOptions[optionName];
-		if(!input){
+		var inputValue = inputOptions[optionName];
+		if(!inputValue){
 			throw('Missing Hubspot auth option ' + optionName);
 		}else{
-			options[optionName] = acceptableOptions[optionName];
+			options[optionName] = inputValue;
 		}
 	});
 	return {
 		auth: {
-			check: function(){
-				return function(req, res, next){
-					if(process.env['NODE_ENV'] == 'development' || req.cookies[options.cookieName]){
-						next();
-					}else{
-						return res.redirect(options.authEntryPoint);
-					}
+			check: function(req, res, next){
+				if(process.env['NODE_ENV'] == 'development' || req.cookies[options.cookieName]){
+					next();
+				}else{
+					return res.redirect(options.authEntryPoint);
 				}
 			},
-			init: function(){
-				return function(req, res, next){
-					res.redirect('https://app.hubspot.com/oauth/authorize?' + querystring.stringify({
+			init: function(req, res, next){
+				res.redirect('https://app.hubspot.com/oauth/authorize?' + querystring.stringify({
+					client_id: options.client_id,
+					redirect_uri: options.redirect_uri,
+					scope: 'contacts'
+				}));
+			},
+			redirect: function(req, res, next){
+				var requestToken = req.query.code;
+				request({
+					method: 'POST',
+					url: 'https://api.hubapi.com/oauth/v1/token',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
+					},
+					form: {
+						grant_type: 'authorization_code',
 						client_id: options.client_id,
+						client_secret: options.client_secret,
 						redirect_uri: options.redirect_uri,
-						scope: 'contacts'
-					}));
-				}
+						code: requestToken
+					}
+				}, function(error, response, body){
+					if(error){
+						res.clearCookie(options.cookieName);
+						res.redirect(options.authEntryPoint);
+					}else{
+						res.cookie(options.cookieName, JSON.parse(body)[options.cookieName]);
+						res.redirect(options.authExitPoint);
+					}
+				});
 			},
-			redirect: function(){
-				return function(req, res, next){
-					var requestToken = req.query.code;
-					request({
-						method: 'POST',
-						url: 'https://api.hubapi.com/oauth/v1/token',
-						headers: {
-							'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
-						},
-						form: {
-							grant_type: 'authorization_code',
-							client_id: options.client_id,
-							client_secret: options.client_secret,
-							redirect_uri: options.redirect_uri,
-							code: requestToken
-						}
-					}, function(error, response, body){
-						if(error){
-							res.clearCookie(options.cookieName);
-							res.redirect(options.authEntryPoint);
-						}else{
-							res.cookie(options.cookieName, JSON.parse(body)[options.cookieName]);
-							res.redirect(options.authExitPoint);
-						}
-					});
-				}
-			},
-			reset: function(){
-				return function(req, res, next){
-					res.clearCookie(options.cookieName);
-					res.redirect(options.authEntryPoint);
-				}
+			reset: function(req, res, next){
+				res.clearCookie(options.cookieName);
+				res.redirect(options.authEntryPoint);
 			}
 		},
 		api: function(params){
