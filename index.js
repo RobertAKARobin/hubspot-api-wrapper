@@ -80,6 +80,11 @@ module.exports = function(inputOptions){
 				}
 				console.log(params.url);
 				request(params, function(error, response, body){
+					if(error || !(response)){
+						return res.json({
+							success: false
+						});
+					}
 					var isAjaxRequest = (req.headers.accept.indexOf('json') > -1);
 					var result = {
 						success: true,
